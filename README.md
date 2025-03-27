@@ -11,10 +11,7 @@ vhack_final_product(alternative) == the product that contains HMM,CNN,LSTM
 
 *Only vhack_final_product & vhack_final_product(alternative) serve as final products that needed to seen by judges. Others projects not prepared for Vhack2025.
 
-
-
-
-
+..........................................................................
 
 Roadmap (for beginners that have 0 knowledge and people who want to see how I learned ML trading step by step)
 
