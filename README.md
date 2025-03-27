@@ -10,7 +10,7 @@ vhack_final_product(alternative) == the product that contains HMM,CNN,LSTM
 *All backend are only run in python, a flask app.py and templates(.html) files are provided to serve as a simple frontend.
 *Only vhack_final_product & vhack_final_product(alternative serve as final products that needed to seen by judges. Others projects not prepared for Vhack2025.
 
-============================================================================================================================================================
+============================================================================================
 
 Roadmap (for beginners that have 0 knowledge and prople who want to see how I learned ML trading step by step)
 
