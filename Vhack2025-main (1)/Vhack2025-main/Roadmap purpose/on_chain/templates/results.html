@@ -1,0 +1,933 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trading Analysis Results - {{ results.ticker }}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            padding-top: 20px;
+            padding-bottom: 40px;
+            background-color: #f8f9fa;
+        }
+        .header {
+            margin-bottom: 30px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .plot-container {
+            text-align: center;
+            overflow: hidden;
+        }
+        .plot-container img {
+            max-width: 100%;
+            height: auto;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #198754;
+        }
+        .nav-pills .nav-link {
+            color: #198754;
+        }
+        hr.divider {
+            margin: 30px 0;
+            border-top: 1px solid #dee2e6;
+        }
+        .table-responsive {
+            overflow-x: auto;
+        }
+        .bg-gradient-header {
+            background: linear-gradient(to right, #198754, #20c997);
+            color: white;
+        }
+        .metric-card {
+            border-radius: 0.5rem;
+            transition: transform 0.2s;
+        }
+        .metric-card:hover {
+            transform: translateY(-5px);
+        }
+        .metric-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .metric-label {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
+        .badge.bg-onchain {
+            background-color: #6f42c1;
+        }
+        .signal-marker {
+            width: 12px;
+            height: 12px;
+            display: inline-block;
+            border-radius: 50%;
+            margin-right: 5px;
+        }
+        .signal-buy {
+            background-color: #198754;
+        }
+        .signal-sell {
+            background-color: #dc3545;
+        }
+        .signal-hold {
+            background-color: #6c757d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="header text-center">
+            <h1 class="display-4">Trading Analysis Results</h1>
+            <p class="lead">
+                <span class="badge bg-success">{{ results.ticker }}</span>
+                <span class="text-muted">{{ results.start_date }} to {{ results.end_date }}</span>
+                {% if results.analysis_type == 'on_chain' %}
+                <span class="badge bg-onchain">Bitcoin On-Chain Analysis</span>
+                {% endif %}
+            </p>
+            <a href="/" class="btn btn-outline-success">Run New Analysis</a>
+        </div>
+
+        <!-- Navigation Pills -->
+        <ul class="nav nav-pills mb-4 justify-content-center" id="results-tabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="data-tab" data-bs-toggle="pill" data-bs-target="#data" type="button" role="tab" aria-controls="data" aria-selected="true">Data Overview</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="models-tab" data-bs-toggle="pill" data-bs-target="#models" type="button" role="tab" aria-controls="models" aria-selected="false">Model Performance</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="ensemble-tab" data-bs-toggle="pill" data-bs-target="#ensemble" type="button" role="tab" aria-controls="ensemble" aria-selected="false">Ensemble Results</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="predictions-tab" data-bs-toggle="pill" data-bs-target="#predictions" type="button" role="tab" aria-controls="predictions" aria-selected="false">Predictions</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="trading-tab" data-bs-toggle="pill" data-bs-target="#trading" type="button" role="tab" aria-controls="trading" aria-selected="false">Trading Performance</button>
+            </li>
+            {% if results.analysis_type == 'on_chain' %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="onchain-tab" data-bs-toggle="pill" data-bs-target="#onchain" type="button" role="tab" aria-controls="onchain" aria-selected="false">On-Chain Metrics</button>
+            </li>
+            {% endif %}
+        </ul>
+
+        <!-- Tab content -->
+        <div class="tab-content" id="results-tabContent">
+            <!-- Data Overview Tab -->
+            <div class="tab-pane fade show active" id="data" role="tabpanel" aria-labelledby="data-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Data Split Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Dataset</th>
+                                                <th>Start Date</th>
+                                                <th>End Date</th>
+                                                <th>Number of Samples</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Training</td>
+                                                <td>{{ results.split_info.train.start }}</td>
+                                                <td>{{ results.split_info.train.end }}</td>
+                                                <td>{{ results.split_info.train.count }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Validation</td>
+                                                <td>{{ results.split_info.val.start }}</td>
+                                                <td>{{ results.split_info.val.end }}</td>
+                                                <td>{{ results.split_info.val.count }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Test</td>
+                                                <td>{{ results.split_info.test.start }}</td>
+                                                <td>{{ results.split_info.test.end }}</td>
+                                                <td>{{ results.split_info.test.count }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+
+                                <h5 class="mt-4">Target Variable Statistics</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Statistic</th>
+                                                <th>Value</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr>
+                                                <td>Mean Return</td>
+                                                <td>{{ results.target_stats.mean }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Standard Deviation</td>
+                                                <td>{{ results.target_stats.std }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Minimum Return</td>
+                                                <td>{{ results.target_stats.min }}</td>
+                                            </tr>
+                                            <tr>
+                                                <td>Maximum Return</td>
+                                                <td>{{ results.target_stats.max }}</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Data Preview</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    {{ results.data_preview | safe }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Returns Distribution</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container">
+                                    {% if results.plots.returns_distribution %}
+                                    <img src="data:image/png;base64,{{ results.plots.returns_distribution }}" alt="Returns Distribution">
+                                    {% else %}
+                                    <div class="alert alert-warning">Returns distribution plot not available</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">
+                                    {% if results.analysis_type == 'on_chain' %}
+                                    Market Regimes
+                                    {% else %}
+                                    Correlation Matrix
+                                    {% endif %}
+                                </h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container">
+                                    {% if results.analysis_type == 'on_chain' and results.plots.market_regimes %}
+                                    <img src="data:image/png;base64,{{ results.plots.market_regimes }}" alt="Market Regimes">
+                                    {% elif results.plots.correlation_matrix %}
+                                    <img src="data:image/png;base64,{{ results.plots.correlation_matrix }}" alt="Correlation Matrix">
+                                    {% else %}
+                                    <div class="alert alert-warning">Correlation matrix plot not available</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Data Splits Visualization</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container">
+                                    {% if results.plots.data_splits %}
+                                    <img src="data:image/png;base64,{{ results.plots.data_splits }}" alt="Data Splits">
+                                    {% else %}
+                                    <div class="alert alert-warning">Data splits visualization not available</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if results.analysis_type == 'on_chain' and results.regime_info %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Market Regime Analysis</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Regime</th>
+                                                <th>Data Points</th>
+                                                <th>Annualized Return</th>
+                                                <th>Annualized Volatility</th>
+                                                <th>Average RSI</th>
+                                                <th>Interpretation</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for regime in results.regime_info %}
+                                            <tr>
+                                                <td><strong>{{ regime.regime }}</strong></td>
+                                                <td>{{ regime.count }}</td>
+                                                <td>{{ regime.ann_return }}</td>
+                                                <td>{{ regime.ann_vol }}</td>
+                                                <td>{{ regime.avg_rsi }}</td>
+                                                <td>
+                                                    {% if "+" in regime.ann_return and regime.avg_rsi|float > 50 %}
+                                                    <span class="badge bg-success">Bullish</span>
+                                                    {% elif "-" in regime.ann_return and regime.avg_rsi|float < 40 %}
+                                                    <span class="badge bg-danger">Bearish</span>
+                                                    {% elif regime.ann_vol|float > 50 %}
+                                                    <span class="badge bg-warning">Volatile</span>
+                                                    {% else %}
+                                                    <span class="badge bg-secondary">Neutral</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="mt-3">
+                                    <p class="text-muted">
+                                        <strong>Note:</strong> Market regimes are detected using a Hidden Markov Model (HMM) trained on historical price data and technical indicators.
+                                        Each regime represents a distinct market state with unique characteristics.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Model Performance Tab -->
+            <div class="tab-pane fade" id="models" role="tabpanel" aria-labelledby="models-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Model Validation Scores</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th>Validation R²</th>
+                                                <th>Parameters</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for score in results.validation_scores %}
+                                            <tr>
+                                                <td>{{ score.model }}</td>
+                                                <td>{{ score.r2 }}</td>
+                                                <td><small class="text-muted">{{ score.params }}</small></td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Test Set Performance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th>Mean Squared Error</th>
+                                                <th>R² Score</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for perf in results.test_performance %}
+                                            <tr>
+                                                <td>{{ perf.model }}</td>
+                                                <td>{{ perf.mse }}</td>
+                                                <td>{{ perf.r2 }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Feature Importance</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-4">
+                                        <table class="table table-striped">
+                                            <thead>
+                                                <tr>
+                                                    <th>Feature</th>
+                                                    <th>Importance</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for feature in results.feature_importance %}
+                                                <tr>
+                                                    <td>{{ feature.feature }}</td>
+                                                    <td>{{ feature.importance }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                    <div class="col-md-8">
+                                        <div class="plot-container">
+                                            {% if results.plots.feature_importance %}
+                                            <img src="data:image/png;base64,{{ results.plots.feature_importance }}" alt="Feature Importance">
+                                            {% else %}
+                                            <div class="alert alert-warning">Feature importance plot not available</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if results.analysis_type == 'on_chain' and results.cnn_info and results.cnn_info.available %}
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">CNN Pattern Recognition</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>
+                                    <strong>CNN Model Information:</strong>
+                                    Using a convolutional neural network to recognize patterns in {{ results.cnn_info.lookback_window }}-day windows of price data.
+                                </p>
+                                <div class="alert alert-info">
+                                    <p><strong>How the CNN Model Works:</strong></p>
+                                    <ol>
+                                        <li>Looks at {{ results.cnn_info.lookback_window }}-day sequences of price and indicator data</li>
+                                        <li>Uses convolutional layers to detect temporal patterns in the data</li>
+                                        <li>Identifies complex patterns that linear models might miss</li>
+                                        <li>Predicts price direction based on these identified patterns</li>
+                                    </ol>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Ensemble Results Tab -->
+            <div class="tab-pane fade" id="ensemble" role="tabpanel" aria-labelledby="ensemble-tab">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Ensemble Weights</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th>Weight</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for weight in results.ensemble_weights %}
+                                            <tr>
+                                                <td>{{ weight.model }}</td>
+                                                <td>{{ weight.weight }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <p class="mt-3">
+                                    <strong>Ensemble Performance:</strong><br>
+                                    MSE: {{ results.ensemble_metrics.mse }}<br>
+                                    R²: {{ results.ensemble_metrics.r2 }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Model Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <h6>Individual Model Performance vs Ensemble</h6>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Model</th>
+                                                <th>MSE</th>
+                                                <th>R²</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for perf in results.test_performance %}
+                                            <tr>
+                                                <td>{{ perf.model }}</td>
+                                                <td>{{ perf.mse }}</td>
+                                                <td>{{ perf.r2 }}</td>
+                                            </tr>
+                                            {% endfor %}
+                                            <tr class="table-success">
+                                                <td><strong>{{ results.ensemble_metrics.model }}</strong></td>
+                                                <td><strong>{{ results.ensemble_metrics.mse }}</strong></td>
+                                                <td><strong>{{ results.ensemble_metrics.r2 }}</strong></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">How the Ensemble Works</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-7">
+                                        <p>The ensemble model combines predictions from multiple models to create a more robust prediction:</p>
+                                        <ol>
+                                            <li>Each model makes its own prediction based on the same input features</li>
+                                            <li>Predictions are weighted according to each model's performance on validation data</li>
+                                            <li>Higher performing models receive greater weight in the final prediction</li>
+                                            <li>The ensemble typically outperforms any individual model by:
+                                                <ul>
+                                                    <li>Reducing overfitting</li>
+                                                    <li>Capturing different aspects of the data</li>
+                                                    <li>Increasing prediction stability</li>
+                                                </ul>
+                                            </li>
+                                        </ol>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="alert alert-info">
+                                            <p><strong>Ensemble Formula:</strong></p>
+                                            <p><em>Prediction = w₁ × Model₁ + w₂ × Model₂ + ... + wₙ × Modelₙ</em></p>
+                                            <p>Where:</p>
+                                            <ul>
+                                                <li><em>w₁, w₂, ..., wₙ</em> are the weights (shown in the table)</li>
+                                                <li><em>Model₁, Model₂, ..., Modelₙ</em> are the individual model predictions</li>
+                                                <li>Weights are optimized to minimize error on validation data</li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Predictions Tab -->
+            <div class="tab-pane fade" id="predictions" role="tabpanel" aria-labelledby="predictions-tab">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Model Predictions vs Actual Returns</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container">
+                                    {% if results.plots.predictions %}
+                                    <img src="data:image/png;base64,{{ results.plots.predictions }}" alt="Model Predictions">
+                                    {% elif results.plots.trading_signals %}
+                                    <img src="data:image/png;base64,{{ results.plots.trading_signals }}" alt="Trading Signals">
+                                    {% else %}
+                                    <div class="alert alert-warning">Predictions plot not available</div>
+                                    {% endif %}
+                                </div>
+                                <div class="mt-3">
+                                    <p class="text-muted">
+                                        This chart shows the actual returns compared with predictions from each individual model and the ensemble.
+                                        The test period displayed is {{ results.split_info.test.start }} to {{ results.split_info.test.end }}.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                {% if results.analysis_type == 'on_chain' %}
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Trading Signal Generation</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-7">
+                                        <h6>How Trading Signals Are Generated</h6>
+                                        <p>The on-chain analysis module generates trading signals using a multi-factor approach:</p>
+                                        <ol>
+                                            <li><strong>Ensemble ML Models</strong> - Predictions from multiple machine learning models</li>
+                                            <li><strong>Technical Indicators</strong> - Including RSI, MACD, Bollinger Bands</li>
+                                            <li><strong>On-Chain Metrics</strong> - HODL waves, NVT ratio, and more (if data is available)</li>
+                                            <li><strong>Market Regimes</strong> - Different strategies for different market conditions</li>
+                                        </ol>
+                                        <p>Signals are generated when multiple factors align in the same direction:</p>
+                                        <ul>
+                                            <li><span class="signal-marker signal-buy"></span> <strong>Buy Signal</strong>: Generated when models predict positive returns</li>
+                                            <li><span class="signal-marker signal-sell"></span> <strong>Sell Signal</strong>: Generated when models predict negative returns</li>
+                                            <li><span class="signal-marker signal-hold"></span> <strong>Hold</strong>: When no clear direction is predicted</li>
+                                        </ul>
+                                    </div>
+                                    <div class="col-md-5">
+                                        <div class="alert alert-info">
+                                            <h6>Signal Generation Process</h6>
+                                            <ol>
+                                                <li>Each model generates a prediction</li>
+                                                <li>Models vote on direction (buy/sell/hold)</li>
+                                                <li>Votes are weighted by model performance</li>
+                                                <li>Technical rules add additional votes</li>
+                                                <li>Final signal determined by majority vote</li>
+                                            </ol>
+                                            <p class="mb-0"><strong>Note:</strong> Signal sensitivity is calibrated to ensure appropriate trading frequency.</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% endif %}
+            </div>
+            
+            <!-- Trading Performance Tab -->
+            <div class="tab-pane fade" id="trading" role="tabpanel" aria-labelledby="trading-tab">
+                <div class="row mb-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Strategy Performance Metrics</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Total Return</div>
+                                                <div class="metric-value text-success">{{ results.strategy_metrics.ml_metrics.total_return_pct }}</div>
+                                                <div class="small">(vs Buy & Hold: {{ results.strategy_metrics.bh_metrics.total_return_pct }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Annualized Return</div>
+                                                <div class="metric-value text-success">{{ results.strategy_metrics.ml_metrics.annualized_return_pct }}</div>
+                                                <div class="small">(vs Buy & Hold: {{ results.strategy_metrics.bh_metrics.annualized_return_pct }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Sharpe Ratio</div>
+                                                <div class="metric-value text-primary">{{ results.strategy_metrics.ml_metrics.sharpe_ratio }}</div>
+                                                <div class="small">(vs Buy & Hold: {{ results.strategy_metrics.bh_metrics.sharpe_ratio }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Max Drawdown</div>
+                                                <div class="metric-value text-danger">{{ results.strategy_metrics.ml_metrics.max_drawdown_pct }}</div>
+                                                <div class="small">(vs Buy & Hold: {{ results.strategy_metrics.bh_metrics.max_drawdown_pct }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Calmar Ratio</div>
+                                                <div class="metric-value text-primary">{{ results.strategy_metrics.ml_metrics.calmar_ratio }}</div>
+                                                <div class="small">(vs Buy & Hold: {{ results.strategy_metrics.bh_metrics.calmar_ratio }})</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-2">
+                                        <div class="card bg-light metric-card">
+                                            <div class="card-body text-center">
+                                                <div class="metric-label">Strategy Type</div>
+                                                <div class="metric-value">
+                                                    {% if results.analysis_type == 'on_chain' %}
+                                                    <span class="badge bg-onchain">On-Chain</span>
+                                                    {% else %}
+                                                    <span class="badge bg-success">ML Ensemble</span>
+                                                    {% endif %}
+                                                </div>
+                                                <div class="small">Test period: {{ results.split_info.test.count }} days</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Strategy Performance Comparison</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container mb-4">
+                                    {% if results.plots.strategy_comparison %}
+                                    <img src="data:image/png;base64,{{ results.plots.strategy_comparison }}" alt="Strategy Comparison">
+                                    {% else %}
+                                    <div class="alert alert-warning">Strategy comparison plot not available</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="mt-4">
+                                    <h5>Strategy Explanation</h5>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">
+                                                        {% if results.analysis_type == 'on_chain' %}
+                                                        <span class="badge bg-onchain">On-Chain</span>
+                                                        {% else %}
+                                                        <span class="badge bg-success">ML Ensemble</span>
+                                                        {% endif %}
+                                                        Trading Strategy
+                                                    </h6>
+                                                    <p>Uses the ensemble model's predictions to make daily trading decisions:</p>
+                                                    <ul>
+                                                        <li><strong>Buy Signal</strong>: When the model predicts positive returns</li>
+                                                        <li><strong>Sell Signal</strong>: When the model predicts negative returns</li>
+                                                        <li><strong>Position Size</strong>: 98% of portfolio when invested</li>
+                                                        <li><strong>Transaction Cost</strong>: 0.1% per trade</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <div class="card bg-light">
+                                                <div class="card-body">
+                                                    <h6 class="card-title">Buy and Hold Strategy</h6>
+                                                    <p>A benchmark strategy that simply buys the asset on day one and holds throughout the entire test period.</p>
+                                                    <ul>
+                                                        <li><strong>Entry Point</strong>: First day of test period</li>
+                                                        <li><strong>Exit Point</strong>: Last day of test period</li>
+                                                        <li><strong>Position Size</strong>: 98% of portfolio</li>
+                                                        <li><strong>Transaction Cost</strong>: 0.1% per trade</li>
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="alert alert-info mt-3">
+                                        <strong>Performance Metric Definitions:</strong><br>
+                                        <strong>Total Return:</strong> The percentage gain or loss over the entire period.<br>
+                                        <strong>Annualized Return:</strong> The return normalized to an annual basis.<br>
+                                        <strong>Sharpe Ratio:</strong> A measure of risk-adjusted return (higher is better).<br>
+                                        <strong>Maximum Drawdown:</strong> The largest peak-to-trough decline in portfolio value.<br>
+                                        <strong>Calmar Ratio:</strong> The annualized return divided by the maximum drawdown (higher is better).
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- On-Chain Metrics Tab (only for on-chain analysis) -->
+            {% if results.analysis_type == 'on_chain' %}
+            <div class="tab-pane fade" id="onchain" role="tabpanel" aria-labelledby="onchain-tab">
+                <div class="row">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">On-Chain Analysis Overview</h5>
+                            </div>
+                            <div class="card-body">
+                                <p>On-chain analysis examines data directly from the Bitcoin blockchain, providing insights not available from price action alone.</p>
+                                
+                                {% if results.on_chain_metrics %}
+                                <h5 class="mt-4">Key On-Chain Metrics</h5>
+                                <div class="table-responsive">
+                                    <table class="table table-striped">
+                                        <thead>
+                                            <tr>
+                                                <th>Metric</th>
+                                                <th>Mean</th>
+                                                <th>Std</th>
+                                                <th>Min</th>
+                                                <th>Max</th>
+                                                <th>Description</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for metric in results.on_chain_metrics %}
+                                            <tr>
+                                                <td>{{ metric.name }}</td>
+                                                <td>{{ metric.mean }}</td>
+                                                <td>{{ metric.std }}</td>
+                                                <td>{{ metric.min }}</td>
+                                                <td>{{ metric.max }}</td>
+                                                <td>
+                                                    {% if metric.name == 'nvt_ratio' %}
+                                                    Network Value to Transactions Ratio - measures if Bitcoin is overvalued relative to transaction activity
+                                                    {% elif metric.name == 'hodl_ratio' %}
+                                                    Ratio of long-term holders to short-term holders - indicates accumulation or distribution phases
+                                                    {% elif metric.name == 'mvrv_ratio' %}
+                                                    Market Value to Realized Value Ratio - compares market cap to realized cap
+                                                    {% else %}
+                                                    On-chain metric derived from blockchain data
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                </div>
+                                {% else %}
+                                <div class="alert alert-warning">
+                                    <strong>Note:</strong> On-chain metrics are not available for this analysis. The model was trained using price data only.
+                                    For full on-chain analysis capabilities, provide on-chain data files from blockchain.com and lookintobitcoin.
+                                </div>
+                                {% endif %}
+                                
+                                <h5 class="mt-4">Advanced Analysis Techniques</h5>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6 class="card-title">Market Regime Detection</h6>
+                                                <p>Hidden Markov Models (HMM) identify distinct market states or "regimes" with different statistical properties.</p>
+                                                <ul>
+                                                    <li>Automatically detects bullish, bearish, and ranging markets</li>
+                                                    <li>Different trading strategies optimized for each regime</li>
+                                                    <li>More effective than using a single strategy for all market conditions</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card bg-light">
+                                            <div class="card-body">
+                                                <h6 class="card-title">Specialized ML Models</h6>
+                                                <p>Advanced model architecture optimized for Bitcoin's unique characteristics:</p>
+                                                <ul>
+                                                    <li>Ensemble models reduce noise and improve prediction stability</li>
+                                                    <li>Feature engineering specific to cryptocurrency markets</li>
+                                                    {% if results.cnn_info and results.cnn_info.available %}
+                                                    <li>Convolutional Neural Networks for pattern recognition</li>
+                                                    {% endif %}
+                                                    <li>Models trained to recognize long/short-term holder behavior</li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row mt-4">
+                    <div class="col-md-12">
+                        <div class="card">
+                            <div class="card-header bg-gradient-header">
+                                <h5 class="mb-0">Trading Signal Interpretation</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="plot-container mb-4">
+                                    {% if results.plots.trading_signals %}
+                                    <img src="data:image/png;base64,{{ results.plots.trading_signals }}" alt="Trading Signals">
+                                    {% else %}
+                                    <div class="alert alert-warning">Trading signals plot not available</div>
+                                    {% endif %}
+                                </div>
+                                
+                                <div class="alert alert-info">
+                                    <h6>How to Interpret On-Chain Signals</h6>
+                                    <p>On-chain metrics provide unique insights about market conditions:</p>
+                                    <ul>
+                                        <li><strong>NVT Ratio</strong> - High values may indicate overvaluation; low values suggest undervaluation</li>
+                                        <li><strong>HODL Waves</strong> - Increasing long-term holder percentage indicates accumulation phase</li>
+                                        <li><strong>MVRV Ratio</strong> - Values above 3.5 historically indicate market tops; below 1 indicate bottoms</li>
+                                        <li><strong>Fee-to-Reward Ratio</strong> - Rising fees indicate increased network usage and potential price pressure</li>
+                                    </ul>
+                                    <p class="mb-0">The integrated model combines these metrics with technical indicators and machine learning for enhanced signals.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Bootstrap Bundle with Popper -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
