@@ -13,7 +13,7 @@ vhack_final_product(alternative) == the product that contains HMM,CNN,LSTM
 
 ============================================================================================
 
-Roadmap (for beginners that have 0 knowledge and prople who want to see how I learned ML trading step by step)
+Roadmap (for beginners that have 0 knowledge and people who want to see how I learned ML trading step by step)
 
 1. technical_analysis_simulation == projects that I used to learn basic technical analysis, an simulation for 365 days how different trading strategies work and compare their performance)
 
